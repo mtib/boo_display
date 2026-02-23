@@ -7,6 +7,7 @@ const ESPHOME_HOST = process.env.ESPHOME_HOST || "http://boo-display.local";
 const PORT = parseInt(process.env.PORT || "3000", 10);
 const DB_PATH = process.env.DB_PATH || "./data/webhooks.db";
 const POLL_INTERVAL = parseInt(process.env.POLL_INTERVAL || "10000", 10);
+const DEVICE_TIMEOUT = 2000;
 
 // --- Database setup ---
 
@@ -64,7 +65,7 @@ let lastText: string = "";
 
 async function pollBlinking() {
   try {
-    const res = await fetch(`${ESPHOME_HOST}/binary_sensor/Blinking`);
+    const res = await fetch(`${ESPHOME_HOST}/binary_sensor/Blinking`, { signal: AbortSignal.timeout(DEVICE_TIMEOUT) });
     if (!res.ok) return;
     const data = await res.json();
     const current = data.value as boolean;
@@ -95,6 +96,7 @@ app.post("/text", async (c) => {
     res = await fetch(url, {
       method: "POST",
       headers: { "Content-Length": "0" },
+      signal: AbortSignal.timeout(DEVICE_TIMEOUT),
     });
   } catch {
     return c.json({ error: "Device unreachable" }, 502);
@@ -118,7 +120,7 @@ app.get("/alarm", async (c) => {
   const url = `${ESPHOME_HOST}/binary_sensor/Blinking`;
   let res: Response;
   try {
-    res = await fetch(url);
+    res = await fetch(url, { signal: AbortSignal.timeout(DEVICE_TIMEOUT) });
   } catch {
     return c.json({ error: "Device unreachable" }, 502);
   }
