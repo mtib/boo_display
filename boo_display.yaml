@@ -8,7 +8,7 @@ esphome:
     then:
       - lambda: |-
           id(boot_count) += 1;
-          // Read scroll_text from NVS
+          // Read state from NVS
           nvs_handle_t nvs;
           if (nvs_open("boo", NVS_READONLY, &nvs) == ESP_OK) {
             size_t len = 0;
@@ -16,16 +16,21 @@ esphome:
               char* buf = new char[len];
               if (nvs_get_str(nvs, "text", buf, &len) == ESP_OK) {
                 id(scroll_text) = std::string(buf);
-                ESP_LOGI("boot", "Restored text from NVS: %s", buf);
+                ESP_LOGI("boot", "Restored text: %s", buf);
               }
               delete[] buf;
-            } else {
-              ESP_LOGI("boot", "No text in NVS, using default");
+            }
+            uint8_t blink_val = 0;
+            if (nvs_get_u8(nvs, "blinking", &blink_val) == ESP_OK) {
+              id(blinking) = blink_val != 0;
+              ESP_LOGI("boot", "Restored blinking: %s", id(blinking) ? "true" : "false");
             }
             nvs_close(nvs);
           }
+          bool restored_blinking = id(blinking);
           id(scroll_text_input).publish_state(id(scroll_text));
-          ESP_LOGI("boot", "Boot count: %d, blinking: %s", id(boot_count), id(blinking) ? "true" : "false");
+          id(blinking) = restored_blinking;
+          ESP_LOGI("boot", "Boot count: %d, blinking: %s, text: %s", id(boot_count), id(blinking) ? "true" : "false", id(scroll_text).c_str());
       - if:
           condition:
             lambda: "return !id(blinking);"
@@ -90,7 +95,7 @@ sensor:
 globals:
   - id: blinking
     type: bool
-    restore_value: true
+    restore_value: false
     initial_value: "false"
   - id: blink_state
     type: bool
@@ -147,6 +152,12 @@ binary_sensor:
         - lambda: |-
             id(blinking) = false;
             id(blink_state) = false;
+            nvs_handle_t nvs;
+            if (nvs_open("boo", NVS_READWRITE, &nvs) == ESP_OK) {
+              nvs_set_u8(nvs, "blinking", 0);
+              nvs_commit(nvs);
+              nvs_close(nvs);
+            }
         - light.control:
                   id: rgb_led
                   state: on
@@ -209,9 +220,9 @@ text:
             nvs_handle_t nvs;
             if (nvs_open("boo", NVS_READWRITE, &nvs) == ESP_OK) {
               nvs_set_str(nvs, "text", x.c_str());
+              nvs_set_u8(nvs, "blinking", 1);
               nvs_commit(nvs);
               nvs_close(nvs);
-              ESP_LOGI("nvs", "Saved text: %s", x.c_str());
             }
 
 display:

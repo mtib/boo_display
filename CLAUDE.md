@@ -25,10 +25,25 @@ ESPHome project for ESP32 WROOM with a Hono/Bun proxy server. Config file: `boo_
 - Uses `print()` not `printf()` to avoid format string issues with user text
 
 ## Globals
-- `blinking` (bool): LED blink state
+- `blinking` (bool): LED blink state — persisted via raw NVS
 - `blink_state` (bool): tracks current on/off phase within blink cycle
-- `scroll_text` (std::string): current marquee text, default "Boo!"
+- `scroll_text` (std::string): current marquee text, default "Boo!" — persisted via raw NVS
 - `scroll_x` (int): current scroll pixel offset, resets to 128 on text change
+- `boot_count` (int): increments each boot — persisted via ESPHome `restore_value`
+
+## State Persistence (NVS)
+ESPHome's `restore_value` is broken for `std::string` globals (silently fails even with `max_restore_data_length`). It works for `int` and `bool` but bool had issues with `on_value` callbacks overwriting during boot.
+
+**Solution**: Use raw ESP-IDF NVS API (`nvs_open`/`nvs_get_str`/`nvs_set_str`/`nvs_get_u8`/`nvs_set_u8`) via `nvs_helper.h` include. Namespace: `"boo"`, keys: `"text"`, `"blinking"`.
+
+**Boot sequence**:
+1. Globals initialize with defaults
+2. `on_boot` (priority -10) reads `text` and `blinking` from NVS
+3. `publish_state` syncs the text entity for the web UI (triggers `on_value` which sets `blinking=true`)
+4. `blinking` is restored from saved value after `publish_state`
+5. LED state set based on restored `blinking`
+
+**Write points**: `on_value` (text change) saves text + blinking=1, button `on_press` saves blinking=0.
 
 ## Interaction Flow
 - **Text changed** (via web API or HA): sets `scroll_text`, resets `scroll_x` to 128, sets `blinking = true`
