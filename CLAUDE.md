@@ -66,6 +66,9 @@ Hono app running on Bun, proxies to the ESP32 and adds webhook support.
 ### Webhook Events
 - `{"event": "armed", "text": "..."}` — fired on `POST /text`
 - `{"event": "disarmed"}` — fired when polling detects blinking transition from on→off (polled every 10s)
+- `{"event": "online"}` — fired when device becomes reachable after being offline
+- `{"event": "offline"}` — fired when device becomes unreachable after being online
+- `{"event": "server_restart"}` — fired once on server startup
 - Dispatch is fire-and-forget via `Promise.allSettled`
 
 ### Deployment

@@ -60,13 +60,26 @@ function fireWebhooks(payload: Record<string, unknown>) {
 
 let lastBlinking: boolean | null = null;
 let lastText: string = "";
+let deviceOnline: boolean | null = null;
 
 // --- Polling ---
 
 async function pollBlinking() {
   try {
     const res = await fetch(`${ESPHOME_HOST}/binary_sensor/Blinking`, { signal: AbortSignal.timeout(DEVICE_TIMEOUT) });
-    if (!res.ok) return;
+    if (!res.ok) {
+      if (deviceOnline !== false) {
+        deviceOnline = false;
+        fireWebhooks({ event: "offline" });
+      }
+      return;
+    }
+
+    if (deviceOnline !== true) {
+      deviceOnline = true;
+      fireWebhooks({ event: "online" });
+    }
+
     const data = await res.json();
     const current = data.value as boolean;
 
@@ -76,9 +89,14 @@ async function pollBlinking() {
     lastBlinking = current;
   } catch (e) {
     console.error("Poll error:", e);
+    if (deviceOnline !== false) {
+      deviceOnline = false;
+      fireWebhooks({ event: "offline" });
+    }
   }
 }
 
+fireWebhooks({ event: "server_restart" });
 setInterval(pollBlinking, POLL_INTERVAL);
 pollBlinking();
 

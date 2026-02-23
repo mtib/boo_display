@@ -95,6 +95,21 @@ Webhooks receive a POST with `Content-Type: application/json`.
 {"event": "disarmed"}
 ```
 
+**Device online** (triggered when polling starts succeeding after being offline or on first successful poll):
+```json
+{"event": "online"}
+```
+
+**Device offline** (triggered when polling starts failing after being online):
+```json
+{"event": "offline"}
+```
+
+**Server restart** (triggered once on server startup):
+```json
+{"event": "server_restart"}
+```
+
 ## Running
 
 ```sh
