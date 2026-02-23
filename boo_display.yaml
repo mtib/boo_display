@@ -232,7 +232,7 @@ display:
     update_interval: 50ms
     lambda: |-
       it.printf(0, 0, id(font_small), "%.1f°C", id(temperature).state);
-      it.printf(68, 0, id(font_small), "%.0f%%", id(humidity).state);
+      it.printf(128, 0, id(font_small), TextAlign::TOP_RIGHT, "%.0f%%", id(humidity).state);
       it.line(0, 14, 128, 14);
       int x1, y1, tw, th;
       it.get_text_bounds(0, 0, id(scroll_text).c_str(), id(font_big), TextAlign::TOP_LEFT, &x1, &y1, &tw, &th);
