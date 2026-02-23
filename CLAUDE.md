@@ -1,7 +1,7 @@
 # Boo Display - Project Notes
 
 ## Overview
-ESPHome project for ESP32 WROOM. Config file: `boo_display.yaml`, secrets in `secrets.yaml` (gitignored).
+ESPHome project for ESP32 WROOM with a Hono/Bun proxy server. Config file: `boo_display.yaml`, secrets in `secrets.yaml` (gitignored). Server in `server/`.
 
 ## Hardware
 - **Board**: ESP32 WROOM (`esp32dev`)
@@ -34,10 +34,43 @@ ESPHome project for ESP32 WROOM. Config file: `boo_display.yaml`, secrets in `se
 - **Text changed** (via web API or HA): sets `scroll_text`, resets `scroll_x` to 128, sets `blinking = true`
 - **Button pressed**: always sets `blinking = false`, resets `blink_state`, returns LED to standby blue
 
-## Web Interface
+## ESPHome Web Interface
 - Web server on port 80
-- Text entity "Scroll Text" exposed — change via `POST /text/scroll_text/set?value=...` (requires `Content-Length: 0` header)
+- Text entity "Scroll Text" exposed — change via `POST /text/Scroll%20Text/set?value=...` (requires `Content-Length: 0` header)
+- Binary sensor "Blinking" exposed — read via `GET /binary_sensor/Blinking` (template sensor wrapping the `blinking` global)
+- Uses entity name URLs (not object ID URLs, deprecated in ESPHome 2026.7.0)
 - Also has captive portal for WiFi fallback AP
+
+## Proxy Server (`server/`)
+Hono app running on Bun, proxies to the ESP32 and adds webhook support.
+
+### Stack
+- **Runtime**: Bun
+- **Framework**: Hono
+- **Database**: `bun:sqlite` (built-in), stored at `./data/webhooks.db`
+
+### Config (env vars)
+- `ESPHOME_HOST` — default `http://boo-display.local`
+- `PORT` — default `3000`
+- `DB_PATH` — default `./data/webhooks.db`
+- `POLL_INTERVAL` — default `10000` (ms)
+
+### Endpoints
+- `POST /text` — set scroll text (plaintext body), fires `armed` webhook
+- `GET /text` — returns last set text
+- `GET /alarm` — returns `{"armed": true/false}` from device blinking state
+- `GET /webhooks` — list registered webhook URLs
+- `POST /webhooks` — register webhook (`{"url": "..."}`)
+- `DELETE /webhooks` — remove webhook (`{"url": "..."}`)
+
+### Webhook Events
+- `{"event": "armed", "text": "..."}` — fired on `POST /text`
+- `{"event": "disarmed"}` — fired when polling detects blinking transition from on→off (polled every 10s)
+- Dispatch is fire-and-forget via `Promise.allSettled`
+
+### Running
+- `cd server && bun install && bun run index.ts`
+- Docker: `docker build -t boo-server ./server && docker run -p 3000:3000 -v boo-data:/app/data boo-server`
 
 ## Secrets (gitignored)
 - `wifi_ssid`, `wifi_password`: WiFi credentials

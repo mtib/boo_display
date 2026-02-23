@@ -94,6 +94,10 @@ interval:
                 }
 
 binary_sensor:
+  - platform: template
+    id: blinking_sensor
+    name: "Blinking"
+    lambda: "return id(blinking);"
   - platform: gpio
     pin:
       number: GPIO12
