@@ -104,6 +104,15 @@ bun run index.ts
 
 ## Docker
 
+A prebuilt image is published to GitHub Container Registry on every push to `main` that changes `server/`:
+
+```sh
+docker pull ghcr.io/mtib/boo_display/server:latest
+docker run -p 3000:3000 -v boo-data:/app/data ghcr.io/mtib/boo_display/server:latest
+```
+
+To build locally:
+
 ```sh
 docker build -t boo-server .
 docker run -p 3000:3000 -v boo-data:/app/data boo-server
