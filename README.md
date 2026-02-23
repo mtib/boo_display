@@ -26,4 +26,20 @@ The display uses address `0x3C` (7-bit). If your display shows `0x78` on the lab
 
 ## Display
 
-Shows temperature, humidity, and button state. The RGB LED is controllable via Home Assistant or the ESPHome API.
+Top row shows temperature and humidity side by side, separated by a horizontal line. Below, a large scrolling marquee displays configurable text (defaults to "Boo!"). Runs at 20fps with 1px scroll step for smooth animation. I2C runs at 400kHz (SSD1306 max) to avoid tearing.
+
+## RGB LED
+
+- **Standby**: dim blue (10% brightness)
+- **Blinking**: 1s on/off red blink, triggered when scroll text is changed
+- **Button**: always dismisses blinking and returns to standby blue
+
+## Scroll Text API
+
+The web server on port 80 exposes a text entity. Change the scroll text via:
+
+```bash
+curl -X POST "http://<device-ip>/text/scroll_text?value=Hello%20World!"
+```
+
+Changing the text automatically enables red blinking. Press the button to dismiss.

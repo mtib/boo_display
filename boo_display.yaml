@@ -7,10 +7,10 @@ esphome:
       - light.control:
           id: rgb_led
           state: on
-          brightness: 30%
+          brightness: 10%
           red: 0%
           green: 0%
-          blue: 5%
+          blue: 100%
           transition_length: 0s
 
 esp32:
@@ -111,10 +111,10 @@ binary_sensor:
         - light.control:
                   id: rgb_led
                   state: on
-                  brightness: 30%
+                  brightness: 10%
                   red: 0%
                   green: 0%
-                  blue: 5%
+                  blue: 100%
                   transition_length: 0s
 
 output:
@@ -171,7 +171,7 @@ display:
   - platform: ssd1306_i2c
     model: "SSD1306 128x64"
     address: 0x3C
-    update_interval: 100ms
+    update_interval: 50ms
     lambda: |-
       it.printf(0, 0, id(font_small), "%.1f°C", id(temperature).state);
       it.printf(68, 0, id(font_small), "%.0f%%", id(humidity).state);
@@ -179,7 +179,7 @@ display:
       int x1, y1, tw, th;
       it.get_text_bounds(0, 0, id(scroll_text).c_str(), id(font_big), TextAlign::TOP_LEFT, &x1, &y1, &tw, &th);
       it.print(id(scroll_x), 24, id(font_big), id(scroll_text).c_str());
-      id(scroll_x) -= 3;
+      id(scroll_x) -= 1;
       if (id(scroll_x) < -tw) {
         id(scroll_x) = 128;
       }
