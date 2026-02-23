@@ -39,7 +39,7 @@ Top row shows temperature and humidity side by side, separated by a horizontal l
 The web server on port 80 exposes a text entity. Change the scroll text via:
 
 ```bash
-curl -X POST "http://<device-ip>/text/scroll_text?value=Hello%20World!"
+curl -X POST "http://<device-ip>/text/scroll_text/set?value=Hello%20World!" -H "Content-Length: 0"
 ```
 
 Changing the text automatically enables red blinking. Press the button to dismiss.

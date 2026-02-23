@@ -36,7 +36,7 @@ ESPHome project for ESP32 WROOM. Config file: `boo_display.yaml`, secrets in `se
 
 ## Web Interface
 - Web server on port 80
-- Text entity "Scroll Text" exposed — change via `POST /text/scroll_text?value=...`
+- Text entity "Scroll Text" exposed — change via `POST /text/scroll_text/set?value=...` (requires `Content-Length: 0` header)
 - Also has captive portal for WiFi fallback AP
 
 ## Secrets (gitignored)
