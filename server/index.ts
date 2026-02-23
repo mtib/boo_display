@@ -90,10 +90,15 @@ app.post("/text", async (c) => {
   }
 
   const url = `${ESPHOME_HOST}/text/Scroll%20Text/set?value=${encodeURIComponent(text)}`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Length": "0" },
-  });
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Length": "0" },
+    });
+  } catch {
+    return c.json({ error: "Device unreachable" }, 502);
+  }
 
   if (!res.ok) {
     return c.json({ error: "Failed to set text", status: res.status }, 502);
@@ -111,7 +116,12 @@ app.get("/text", (c) => {
 
 app.get("/alarm", async (c) => {
   const url = `${ESPHOME_HOST}/binary_sensor/Blinking`;
-  const res = await fetch(url);
+  let res: Response;
+  try {
+    res = await fetch(url);
+  } catch {
+    return c.json({ error: "Device unreachable" }, 502);
+  }
 
   if (!res.ok) {
     return c.json({ error: "Failed to read alarm state", status: res.status }, 502);

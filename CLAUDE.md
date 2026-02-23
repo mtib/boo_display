@@ -68,9 +68,11 @@ Hono app running on Bun, proxies to the ESP32 and adds webhook support.
 - `{"event": "disarmed"}` — fired when polling detects blinking transition from on→off (polled every 10s)
 - Dispatch is fire-and-forget via `Promise.allSettled`
 
-### Running
-- `cd server && bun install && bun run index.ts`
-- Docker: `docker build -t boo-server ./server && docker run -p 3000:3000 -v boo-data:/app/data boo-server`
+### Deployment
+- **Image**: `ghcr.io/mtib/boo_display/server:latest` — built by GitHub Actions on push to `server/`, also manually triggerable
+- **Public URL**: `https://api.display.boo.mtib.dev` — Caddy reverse proxy with bearer token auth
+- **Container needs `ESPHOME_HOST` set to the device IP** — mDNS (`.local`) doesn't work inside Docker
+- Local: `cd server && bun install && bun run index.ts`
 
 ## Secrets (gitignored)
 - `wifi_ssid`, `wifi_password`: WiFi credentials
