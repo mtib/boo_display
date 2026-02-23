@@ -1,17 +1,43 @@
 esphome:
   name: boo-display
   friendly_name: Boo Display
+  includes:
+    - nvs_helper.h
   on_boot:
     priority: -10
     then:
-      - light.control:
-          id: rgb_led
-          state: on
-          brightness: 10%
-          red: 0%
-          green: 0%
-          blue: 100%
-          transition_length: 0s
+      - lambda: |-
+          id(boot_count) += 1;
+          // Read scroll_text from NVS
+          nvs_handle_t nvs;
+          if (nvs_open("boo", NVS_READONLY, &nvs) == ESP_OK) {
+            size_t len = 0;
+            if (nvs_get_str(nvs, "text", nullptr, &len) == ESP_OK && len > 0) {
+              char* buf = new char[len];
+              if (nvs_get_str(nvs, "text", buf, &len) == ESP_OK) {
+                id(scroll_text) = std::string(buf);
+                ESP_LOGI("boot", "Restored text from NVS: %s", buf);
+              }
+              delete[] buf;
+            } else {
+              ESP_LOGI("boot", "No text in NVS, using default");
+            }
+            nvs_close(nvs);
+          }
+          id(scroll_text_input).publish_state(id(scroll_text));
+          ESP_LOGI("boot", "Boot count: %d, blinking: %s", id(boot_count), id(blinking) ? "true" : "false");
+      - if:
+          condition:
+            lambda: "return !id(blinking);"
+          then:
+            - light.control:
+                id: rgb_led
+                state: on
+                brightness: 10%
+                red: 0%
+                green: 0%
+                blue: 100%
+                transition_length: 0s
 
 esp32:
   board: esp32dev
@@ -45,6 +71,11 @@ i2c:
   frequency: 400kHz
 
 sensor:
+  - platform: template
+    name: "Boot Count"
+    id: boot_count_sensor
+    lambda: "return id(boot_count);"
+    update_interval: 5s
   - platform: dht
     model: DHT11
     pin: GPIO13
@@ -59,7 +90,7 @@ sensor:
 globals:
   - id: blinking
     type: bool
-    restore_value: false
+    restore_value: true
     initial_value: "false"
   - id: blink_state
     type: bool
@@ -73,6 +104,10 @@ globals:
     type: int
     restore_value: false
     initial_value: "128"
+  - id: boot_count
+    type: int
+    restore_value: true
+    initial_value: "0"
 
 interval:
   - interval: 1s
@@ -163,13 +198,21 @@ text:
     min_length: 1
     max_length: 128
     mode: text
-    initial_value: "Boo!"
     on_value:
       then:
         - lambda: |-
+            ESP_LOGI("text", "on_value fired: %s", x.c_str());
             id(scroll_text) = x;
             id(scroll_x) = 128;
             id(blinking) = true;
+            // Persist to NVS
+            nvs_handle_t nvs;
+            if (nvs_open("boo", NVS_READWRITE, &nvs) == ESP_OK) {
+              nvs_set_str(nvs, "text", x.c_str());
+              nvs_commit(nvs);
+              nvs_close(nvs);
+              ESP_LOGI("nvs", "Saved text: %s", x.c_str());
+            }
 
 display:
   - platform: ssd1306_i2c
