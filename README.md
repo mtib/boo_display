@@ -18,6 +18,10 @@ ESPHome project for an ESP32 WROOM dev board.
 
 The display uses address `0x3C` (7-bit). If your display shows `0x78` on the label, that's the 8-bit write address — ESPHome uses the 7-bit form (`0x78 >> 1 = 0x3C`). If nothing shows up, try `0x3D`.
 
+## Case
+
+[3D-printable case on Onshape](https://cad.onshape.com/documents/967ffd4b02ea7e46ebe77549/w/8b915d047e07d8dca5b21e8a/e/1d0cd8778de68e41c68ec2de)
+
 ## Setup
 
 1. Install ESPHome: `pip install esphome`
