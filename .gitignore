@@ -1,0 +1,11 @@
+# ESPHome build artifacts
+.esphome/
+
+# Secrets
+secrets.yaml
+
+# Python
+.venv/
+
+# macOS
+.DS_Store

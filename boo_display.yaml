@@ -1,0 +1,193 @@
+esphome:
+  name: boo-display
+  friendly_name: Boo Display
+  on_boot:
+    priority: -10
+    then:
+      - light.control:
+          id: rgb_led
+          state: on
+          brightness: 30%
+          red: 0%
+          green: 0%
+          blue: 5%
+          transition_length: 0s
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+logger:
+
+api:
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: "Boo-Display Fallback"
+    password: !secret ap_password
+
+captive_portal:
+
+web_server:
+  port: 80
+
+i2c:
+  sda: GPIO16
+  scl: GPIO17
+  scan: true
+  frequency: 400kHz
+
+sensor:
+  - platform: dht
+    model: DHT11
+    pin: GPIO13
+    temperature:
+      name: "Temperature"
+      id: temperature
+    humidity:
+      name: "Humidity"
+      id: humidity
+    update_interval: 30s
+
+globals:
+  - id: blinking
+    type: bool
+    restore_value: false
+    initial_value: "false"
+  - id: blink_state
+    type: bool
+    restore_value: false
+    initial_value: "false"
+  - id: scroll_text
+    type: std::string
+    restore_value: false
+    initial_value: '"Boo!"'
+  - id: scroll_x
+    type: int
+    restore_value: false
+    initial_value: "128"
+
+interval:
+  - interval: 1s
+    then:
+      - if:
+          condition:
+            lambda: "return id(blinking);"
+          then:
+            - lambda: |-
+                id(blink_state) = !id(blink_state);
+                if (id(blink_state)) {
+                  id(red_output).set_level(1.0);
+                  id(green_output).set_level(0.0);
+                  id(blue_output).set_level(0.0);
+                } else {
+                  id(red_output).set_level(0.0);
+                  id(green_output).set_level(0.0);
+                  id(blue_output).set_level(0.0);
+                }
+
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: GPIO12
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+    name: "Button"
+    id: button
+    on_press:
+      then:
+        - lambda: |-
+            id(blinking) = false;
+            id(blink_state) = false;
+        - light.control:
+                  id: rgb_led
+                  state: on
+                  brightness: 30%
+                  red: 0%
+                  green: 0%
+                  blue: 5%
+                  transition_length: 0s
+
+output:
+  - platform: ledc
+    pin:
+      number: GPIO14
+      mode:
+        output: true
+        pulldown: true
+    id: red_output
+
+  - platform: ledc
+    pin:
+      number: GPIO27
+      mode:
+        output: true
+        pulldown: true
+    id: green_output
+
+  - platform: ledc
+    pin:
+      number: GPIO26
+      mode:
+        output: true
+        pulldown: true
+    id: blue_output
+
+light:
+  - platform: rgb
+    name: "RGB LED"
+    id: rgb_led
+    red: red_output
+    green: green_output
+    blue: blue_output
+    default_transition_length: 0s
+
+text:
+  - platform: template
+    name: "Scroll Text"
+    id: scroll_text_input
+    optimistic: true
+    min_length: 1
+    max_length: 128
+    mode: text
+    initial_value: "Boo!"
+    on_value:
+      then:
+        - lambda: |-
+            id(scroll_text) = x;
+            id(scroll_x) = 128;
+            id(blinking) = true;
+
+display:
+  - platform: ssd1306_i2c
+    model: "SSD1306 128x64"
+    address: 0x3C
+    update_interval: 100ms
+    lambda: |-
+      it.printf(0, 0, id(font_small), "%.1f°C", id(temperature).state);
+      it.printf(68, 0, id(font_small), "%.0f%%", id(humidity).state);
+      it.line(0, 14, 128, 14);
+      int x1, y1, tw, th;
+      it.get_text_bounds(0, 0, id(scroll_text).c_str(), id(font_big), TextAlign::TOP_LEFT, &x1, &y1, &tw, &th);
+      it.print(id(scroll_x), 24, id(font_big), id(scroll_text).c_str());
+      id(scroll_x) -= 3;
+      if (id(scroll_x) < -tw) {
+        id(scroll_x) = 128;
+      }
+
+font:
+  - file: "gfonts://Roboto"
+    id: font_small
+    size: 12
+  - file: "gfonts://Roboto"
+    id: font_big
+    size: 32
