@@ -233,19 +233,19 @@ display:
     lambda: |-
       it.printf(0, 0, id(font_small), "%.1f°C", id(temperature).state);
       it.printf(128, 0, id(font_small), TextAlign::TOP_RIGHT, "%.0f%%", id(humidity).state);
-      it.line(0, 14, 128, 14);
+      // separator removed
       int x1, y1, tw, th;
       it.get_text_bounds(0, 0, id(scroll_text).c_str(), id(font_big), TextAlign::TOP_LEFT, &x1, &y1, &tw, &th);
-      it.print(id(scroll_x), 24, id(font_big), id(scroll_text).c_str());
+      it.print(id(scroll_x), 16, id(font_big), id(scroll_text).c_str());
       id(scroll_x) -= 1;
       if (id(scroll_x) < -tw) {
         id(scroll_x) = 128;
       }
 
 font:
-  - file: "gfonts://Roboto"
+  - file: "gfonts://Pixelify+Sans"
     id: font_small
-    size: 12
-  - file: "gfonts://Roboto"
+    size: 16
+  - file: "gfonts://Oswald"
     id: font_big
     size: 32

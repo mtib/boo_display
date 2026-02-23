@@ -96,6 +96,10 @@ Hono app running on Bun, proxies to the ESP32 and adds webhook support.
 - `wifi_ssid`, `wifi_password`: WiFi credentials
 - `ota_password`, `ap_password`: OTA and fallback AP passwords
 
+## Flashing
+- `esphome run boo_display.yaml --no-logs` — compile and flash via OTA
+- `esphome logs boo_display.yaml` — view device logs
+
 ## Performance Notes
 - I2C at 400kHz (SSD1306 max) eliminates screen tearing
 - 50ms display interval is near practical max (~23ms per full frame transfer)
