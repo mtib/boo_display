@@ -294,6 +294,7 @@ console.log(`Boo Display server listening on port ${PORT}`);
 console.log(`ESPHome host: ${ESPHOME_HOST}`);
 console.log(`Polling interval: ${POLL_INTERVAL}ms`);
 console.log(`Database: ${DB_PATH}`);
+console.log(`Git SHA: ${process.env.GIT_SHA ?? "unknown"}`);
 if (HA_TOKEN && HA_URL) {
   console.log(`Home Assistant notifications enabled: ${HA_URL}`);
 }
