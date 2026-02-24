@@ -1,7 +1,9 @@
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 import { Database } from "bun:sqlite";
 
 const app = new Hono();
+app.use("*", cors());
 
 const ESPHOME_HOST = process.env.ESPHOME_HOST || "http://boo-display.local";
 const PORT = parseInt(process.env.PORT || "3000", 10);
