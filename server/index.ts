@@ -153,6 +153,60 @@ app.get("/alarm", async (c) => {
   return c.json({ armed: data.value });
 });
 
+app.get("/health", async (c) => {
+  const start = Date.now();
+  type SensorResult =
+    | { ok: true; value: number }
+    | { ok: false; error: string; status?: number };
+
+  async function fetchSensor(path: string): Promise<SensorResult> {
+    let res: Response;
+    try {
+      res = await fetch(`${ESPHOME_HOST}${path}`, {
+        signal: AbortSignal.timeout(DEVICE_TIMEOUT),
+      });
+    } catch {
+      return { ok: false, error: "Device unreachable" };
+    }
+    if (!res.ok) {
+      return { ok: false, error: "Device error", status: res.status };
+    }
+    const data = await res.json();
+    return { ok: true, value: data.value as number };
+  }
+
+  const [bootCountResult, temperatureResult, humidityResult] =
+    await Promise.all([
+      fetchSensor("/sensor/Boot%20Count"),
+      fetchSensor("/sensor/Temperature"),
+      fetchSensor("/sensor/Humidity"),
+    ]);
+
+  const rtt = Date.now() - start;
+
+  if (!bootCountResult.ok || !temperatureResult.ok || !humidityResult.ok) {
+    return c.json(
+      {
+        error: "Device unreachable or returned an error",
+        rtt_ms: rtt,
+        details: {
+          boot_count: bootCountResult,
+          temperature: temperatureResult,
+          humidity: humidityResult,
+        },
+      },
+      502
+    );
+  }
+
+  return c.json({
+    boot_count: bootCountResult.value,
+    temperature_c: temperatureResult.value,
+    humidity_pct: humidityResult.value,
+    rtt_ms: rtt,
+  });
+});
+
 // --- Webhook management ---
 
 app.get("/webhooks", (c) => {

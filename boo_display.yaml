@@ -13,6 +13,7 @@ esphome:
       then:
         - lambda: |-
             id(boot_count) += 1;
+            id(boot_count_sensor).publish_state(id(boot_count));
             // Log reset reason for crash diagnosis
             const char* rr;
             switch (esp_reset_reason()) {
@@ -99,7 +100,7 @@ sensor:
     name: "Boot Count"
     id: boot_count_sensor
     lambda: "return id(boot_count);"
-    update_interval: 5s
+    update_interval: never
   - platform: dht
     model: DHT11
     pin: GPIO13

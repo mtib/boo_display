@@ -23,6 +23,11 @@ curl -X POST http://localhost:3000/text -d "Hello World"
 
 Response: `{"ok": true, "text": "Hello World"}`
 
+Errors:
+- `400` — `{"error": "Body must contain text"}` (empty body)
+- `502` — `{"error": "Device unreachable"}` (network/timeout)
+- `502` — `{"error": "Failed to set text", "status": 503}` (device responded with non-OK)
+
 ### `GET /text`
 
 Get the last text that was set via the server.
@@ -42,6 +47,37 @@ curl http://localhost:3000/alarm
 ```
 
 Response: `{"armed": true}`
+
+Errors:
+- `502` — `{"error": "Device unreachable"}` (network/timeout)
+- `502` — `{"error": "Failed to read alarm state", "status": 503}` (device responded with non-OK)
+
+### `GET /health`
+
+Fetch boot count, temperature, and humidity directly from the device in a single call. Includes round-trip time measured from the server.
+
+```sh
+curl http://localhost:3000/health
+```
+
+Response:
+```json
+{"boot_count": 42, "temperature_c": 21.0, "humidity_pct": 55.0, "rtt_ms": 38}
+```
+
+Errors:
+- `502` if any sensor is unreachable — returns per-sensor detail:
+```json
+{
+  "error": "Device unreachable or returned an error",
+  "rtt_ms": 2001,
+  "details": {
+    "boot_count": {"ok": false, "error": "Device unreachable"},
+    "temperature": {"ok": true, "value": 21.0},
+    "humidity": {"ok": false, "error": "Device error", "status": 503}
+  }
+}
+```
 
 ### `GET /webhooks`
 
@@ -65,7 +101,9 @@ curl -X POST http://localhost:3000/webhooks \
 
 Response: `{"ok": true, "id": 1, "url": "https://example.com/hook"}`
 
-Returns `409` if the URL is already registered.
+Errors:
+- `400` — `{"error": "Body must contain a 'url' string"}`
+- `409` — `{"error": "Webhook URL already registered"}`
 
 ### `DELETE /webhooks`
 
@@ -79,7 +117,9 @@ curl -X DELETE http://localhost:3000/webhooks \
 
 Response: `{"ok": true}`
 
-Returns `404` if the URL is not found.
+Errors:
+- `400` — `{"error": "Body must contain a 'url' string"}`
+- `404` — `{"error": "Webhook URL not found"}`
 
 ## Webhook payloads
 

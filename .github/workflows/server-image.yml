@@ -1,4 +1,4 @@
-name: Build server image
+name: Build and deploy server image
 
 on:
   push:
@@ -31,3 +31,26 @@ jobs:
           tags: |
             ${{ env.IMAGE }}:latest
             ${{ env.IMAGE }}:${{ github.sha }}
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - name: Deploy to server
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no root@mtib.dev <<'ENDSSH'
+          ssh mtib@100.104.3.12 <<'ENDINNER'
+          set -e
+          cd containers/
+          docker compose pull boo-display
+          docker compose up -d boo-display
+          ENDINNER
+          ENDSSH
+
+          rm -f ~/.ssh/deploy_key

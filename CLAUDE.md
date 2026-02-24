@@ -31,6 +31,11 @@ ESPHome project for ESP32 WROOM with a Hono/Bun proxy server. Config file: `boo_
 - `scroll_x` (int): current scroll pixel offset, resets to 128 on text change
 - `boot_count` (int): increments each boot — persisted via ESPHome `restore_value`
 
+## Boot Count Sensor
+- Template sensor `boot_count_sensor` uses `update_interval: never` to avoid periodic log spam
+- `publish_state` is called once in the `on_boot` lambda immediately after incrementing
+- The sensor value is served by the ESPHome web server at `GET /sensor/Boot%20Count` indefinitely until the next boot
+
 ## State Persistence (NVS)
 ESPHome's `restore_value` is broken for `std::string` globals (silently fails even with `max_restore_data_length`). It works for `int` and `bool` but bool had issues with `on_value` callbacks overwriting during boot.
 
@@ -53,6 +58,9 @@ ESPHome's `restore_value` is broken for `std::string` globals (silently fails ev
 - Web server on port 80
 - Text entity "Scroll Text" exposed — change via `POST /text/Scroll%20Text/set?value=...` (requires `Content-Length: 0` header)
 - Binary sensor "Blinking" exposed — read via `GET /binary_sensor/Blinking` (template sensor wrapping the `blinking` global)
+- Sensor "Boot Count" exposed — read via `GET /sensor/Boot%20Count` (published once on boot)
+- Sensor "Temperature" exposed — read via `GET /sensor/Temperature`
+- Sensor "Humidity" exposed — read via `GET /sensor/Humidity`
 - Uses entity name URLs (not object ID URLs, deprecated in ESPHome 2026.7.0)
 - Also has captive portal for WiFi fallback AP
 
@@ -71,12 +79,57 @@ Hono app running on Bun, proxies to the ESP32 and adds webhook support.
 - `POLL_INTERVAL` — default `10000` (ms)
 
 ### Endpoints
-- `POST /text` — set scroll text (plaintext body), fires `armed` webhook
-- `GET /text` — returns last set text
-- `GET /alarm` — returns `{"armed": true/false}` from device blinking state
-- `GET /webhooks` — list registered webhook URLs
-- `POST /webhooks` — register webhook (`{"url": "..."}`)
-- `DELETE /webhooks` — remove webhook (`{"url": "..."}`)
+
+> **Important**: Any change to server endpoints (additions, removals, changed responses or errors) must be reflected in `server/README.md`.
+
+
+
+#### `POST /text`
+Set scroll text (plaintext body). Fires `armed` webhook.
+- **Success** `200`: `{"ok": true, "text": "Hello"}`
+- **Error** `400`: `{"error": "Body must contain text"}`
+- **Error** `502`: `{"error": "Device unreachable"}` or `{"error": "Failed to set text", "status": 503}`
+
+#### `GET /text`
+Returns the last text set via this server (in-memory, resets on server restart).
+- **Success** `200`: `{"text": "Hello"}`
+
+#### `GET /alarm`
+Returns current blinking state from the device.
+- **Success** `200`: `{"armed": true}`
+- **Error** `502`: `{"error": "Device unreachable"}` or `{"error": "Failed to read alarm state", "status": 503}`
+
+#### `GET /health`
+Fetches boot count, temperature, and humidity from the device. Reports round-trip time.
+- **Success** `200`: `{"boot_count": 42, "temperature_c": 21.0, "humidity_pct": 55.0, "rtt_ms": 38}`
+- **Error** `502`:
+  ```json
+  {
+    "error": "Device unreachable or returned an error",
+    "rtt_ms": 2001,
+    "details": {
+      "boot_count": {"ok": false, "error": "Device unreachable"},
+      "temperature": {"ok": true, "value": 21.0},
+      "humidity": {"ok": false, "error": "Device error", "status": 503}
+    }
+  }
+  ```
+
+#### `GET /webhooks`
+List all registered webhook URLs.
+- **Success** `200`: `{"webhooks": [{"id": 1, "url": "https://...", "created_at": "2026-02-24 12:00:00"}]}`
+
+#### `POST /webhooks`
+Register a webhook URL (`{"url": "..."}`).
+- **Success** `200`: `{"ok": true, "id": 1, "url": "https://..."}`
+- **Error** `400`: `{"error": "Body must contain a 'url' string"}`
+- **Error** `409`: `{"error": "Webhook URL already registered"}`
+
+#### `DELETE /webhooks`
+Remove a webhook URL (`{"url": "..."}`).
+- **Success** `200`: `{"ok": true}`
+- **Error** `400`: `{"error": "Body must contain a 'url' string"}`
+- **Error** `404`: `{"error": "Webhook URL not found"}`
 
 ### Webhook Events
 - `{"event": "armed", "text": "..."}` — fired on `POST /text`
