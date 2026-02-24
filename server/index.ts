@@ -27,6 +27,13 @@ db.run(`
     created_at TEXT DEFAULT (datetime('now'))
   )
 `);
+db.run(`
+  CREATE TABLE IF NOT EXISTS text_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    text TEXT NOT NULL,
+    set_at TEXT DEFAULT (datetime('now'))
+  )
+`);
 
 // --- Webhook dispatch ---
 
@@ -62,7 +69,6 @@ function fireWebhooks(payload: Record<string, unknown>) {
 // --- State ---
 
 let lastBlinking: boolean | null = null;
-let lastText: string | null = null;
 let deviceOnline: boolean | null = null;
 
 // --- Polling ---
@@ -127,17 +133,18 @@ app.post("/text", async (c) => {
     return c.json({ error: "Failed to set text", status: res.status }, 502);
   }
 
-  lastText = text;
+  db.run("INSERT INTO text_history (text) VALUES (?)", [text]);
   fireWebhooks({ event: "armed", text });
 
   return c.json({ ok: true, text });
 });
 
 app.get("/text", (c) => {
-  if (lastText === null) {
+  const row = db.query("SELECT text, set_at FROM text_history ORDER BY id DESC LIMIT 1").get() as any;
+  if (!row) {
     return c.json({ error: "Last set text unknown" }, 400);
   }
-  return c.json({ text: lastText });
+  return c.json({ text: row.text, set_at: row.set_at });
 });
 
 app.get("/alarm", async (c) => {

@@ -91,9 +91,9 @@ Set scroll text (plaintext body). Fires `armed` webhook.
 - **Error** `502`: `{"error": "Device unreachable"}` or `{"error": "Failed to set text", "status": 503}`
 
 #### `GET /text`
-Returns the last text set via this server (in-memory, resets on server restart).
-- **Success** `200`: `{"text": "Hello"}`
-- **Error** `400`: `{"error": "Last set text unknown"}` (no text has been set since server start)
+Returns the last text set via this server, stored in the database.
+- **Success** `200`: `{"text": "Hello", "set_at": "2026-02-24 12:00:00"}`
+- **Error** `400`: `{"error": "Last set text unknown"}` (no text has been set)
 
 #### `GET /alarm`
 Returns current blinking state from the device.

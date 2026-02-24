@@ -30,16 +30,16 @@ Errors:
 
 ### `GET /text`
 
-Get the last text that was set via the server.
+Get the last text that was set via the server, including when it was set.
 
 ```sh
 curl http://localhost:3000/text
 ```
 
-Response: `{"text": "Hello World"}`
+Response: `{"text": "Hello World", "set_at": "2026-02-24 12:00:00"}`
 
 Errors:
-- `400` — `{"error": "Last set text unknown"}` (no text set since server start)
+- `400` — `{"error": "Last set text unknown"}` (no text has been set)
 
 ### `GET /alarm`
 
