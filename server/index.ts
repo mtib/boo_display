@@ -166,25 +166,25 @@ app.get("/alarm", async (c) => {
 });
 
 app.get("/health", async (c) => {
-  const start = Date.now();
   type SensorResult =
-    | { ok: true; value: number }
-    | { ok: false; error: string; status?: number };
+    | { ok: true; value: number; rtt: number }
+    | { ok: false; error: string; status?: number; rtt: number };
 
   async function fetchSensor(path: string): Promise<SensorResult> {
+    const start = Date.now();
     let res: Response;
     try {
       res = await fetch(`${ESPHOME_HOST}${path}`, {
         signal: AbortSignal.timeout(DEVICE_TIMEOUT),
       });
     } catch {
-      return { ok: false, error: "Device unreachable" };
+      return { ok: false, error: "Device unreachable", rtt: Date.now() - start };
     }
     if (!res.ok) {
-      return { ok: false, error: "Device error", status: res.status };
+      return { ok: false, error: "Device error", status: res.status, rtt: Date.now() - start };
     }
     const data = await res.json();
-    return { ok: true, value: data.value as number };
+    return { ok: true, value: data.value as number, rtt: Date.now() - start };
   }
 
   const [bootCountResult, temperatureResult, humidityResult] =
@@ -194,7 +194,7 @@ app.get("/health", async (c) => {
       fetchSensor("/sensor/Humidity"),
     ]);
 
-  const rtt = Date.now() - start;
+  const rtt = Math.round((bootCountResult.rtt + temperatureResult.rtt + humidityResult.rtt) / 3);
 
   if (!bootCountResult.ok || !temperatureResult.ok || !humidityResult.ok) {
     return c.json(
