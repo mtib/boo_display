@@ -4,45 +4,64 @@ esphome:
   includes:
     - nvs_helper.h
   on_boot:
-    priority: -10
-    then:
-      - lambda: |-
-          id(boot_count) += 1;
-          // Read state from NVS
-          nvs_handle_t nvs;
-          if (nvs_open("boo", NVS_READONLY, &nvs) == ESP_OK) {
-            size_t len = 0;
-            if (nvs_get_str(nvs, "text", nullptr, &len) == ESP_OK && len > 0) {
-              char* buf = new char[len];
-              if (nvs_get_str(nvs, "text", buf, &len) == ESP_OK) {
-                id(scroll_text) = std::string(buf);
-                ESP_LOGI("boot", "Restored text: %s", buf);
+    - priority: 600
+      then:
+        - lambda: |-
+            disableCore0WDT();
+            disableCore1WDT();
+    - priority: -10
+      then:
+        - lambda: |-
+            id(boot_count) += 1;
+            // Log reset reason for crash diagnosis
+            const char* rr;
+            switch (esp_reset_reason()) {
+              case ESP_RST_POWERON:  rr = "POWERON";  break;
+              case ESP_RST_EXT:      rr = "EXT";      break;
+              case ESP_RST_SW:       rr = "SW";       break;
+              case ESP_RST_PANIC:    rr = "PANIC";    break;
+              case ESP_RST_INT_WDT:  rr = "INT_WDT";  break;
+              case ESP_RST_TASK_WDT: rr = "TASK_WDT"; break;
+              case ESP_RST_WDT:      rr = "WDT";      break;
+              case ESP_RST_BROWNOUT: rr = "BROWNOUT"; break;
+              default:               rr = "UNKNOWN";  break;
+            }
+            ESP_LOGI("boot", "Reset reason: %s", rr);
+            // Read state from NVS
+            nvs_handle_t nvs;
+            if (nvs_open("boo", NVS_READONLY, &nvs) == ESP_OK) {
+              size_t len = 0;
+              if (nvs_get_str(nvs, "text", nullptr, &len) == ESP_OK && len > 0) {
+                char* buf = new char[len];
+                if (nvs_get_str(nvs, "text", buf, &len) == ESP_OK) {
+                  id(scroll_text) = std::string(buf);
+                  ESP_LOGI("boot", "Restored text: %s", buf);
+                }
+                delete[] buf;
               }
-              delete[] buf;
+              uint8_t blink_val = 0;
+              if (nvs_get_u8(nvs, "blinking", &blink_val) == ESP_OK) {
+                id(blinking) = blink_val != 0;
+                ESP_LOGI("boot", "Restored blinking: %s", id(blinking) ? "true" : "false");
+              }
+              nvs_close(nvs);
             }
-            uint8_t blink_val = 0;
-            if (nvs_get_u8(nvs, "blinking", &blink_val) == ESP_OK) {
-              id(blinking) = blink_val != 0;
-              ESP_LOGI("boot", "Restored blinking: %s", id(blinking) ? "true" : "false");
-            }
-            nvs_close(nvs);
-          }
-          id(scroll_text_input).publish_state(id(scroll_text));
-          ESP_LOGI("boot", "Boot count: %d, blinking: %s, text: %s", id(boot_count), id(blinking) ? "true" : "false", id(scroll_text).c_str());
-      - delay: 200ms
-      - lambda: id(boot_init) = false;
-      - if:
-          condition:
-            lambda: "return !id(blinking);"
-          then:
-            - light.control:
-                id: rgb_led
-                state: on
-                brightness: 20%
-                red: 0%
-                green: 0%
-                blue: 100%
-                transition_length: 0s
+            id(scroll_text_input).publish_state(id(scroll_text));
+            ESP_LOGI("boot", "Boot count: %d, blinking: %s, text: %s", id(boot_count), id(blinking) ? "true" : "false", id(scroll_text).c_str());
+        - delay: 200ms
+        - lambda: id(boot_init) = false;
+        - if:
+            condition:
+              lambda: "return !id(blinking);"
+            then:
+              - light.control:
+                  id: rgb_led
+                  state: on
+                  brightness: 20%
+                  red: 0%
+                  green: 0%
+                  blue: 100%
+                  transition_length: 0s
 
 esp32:
   board: esp32dev
@@ -217,9 +236,12 @@ text:
       then:
         - lambda: |-
             ESP_LOGI("text", "on_value fired: %s", x.c_str());
+            bool text_changed = (x != id(scroll_text));
             id(scroll_text) = x;
-            id(scroll_x) = 128;
-            if (!id(boot_init)) {
+            if (text_changed) {
+              id(scroll_x) = 128;
+            }
+            if (!id(boot_init) && text_changed) {
               id(blinking) = true;
               // Persist to NVS
               nvs_handle_t nvs;
