@@ -11,6 +11,8 @@ const DB_PATH = process.env.DB_PATH || "./data/webhooks.db";
 const POLL_INTERVAL = parseInt(process.env.POLL_INTERVAL || "10000", 10);
 const DEVICE_TIMEOUT = 2000;
 const SERVER_STARTED_AT = new Date().toISOString();
+const HA_TOKEN = process.env.HA_TOKEN;
+const HA_URL = process.env.HA_URL;
 
 // --- Database setup ---
 
@@ -63,6 +65,27 @@ function fireWebhooks(payload: Record<string, unknown>) {
         console.error(`Webhook ${urls[i]} failed: ${r.reason}`);
       }
     }
+  });
+}
+
+function sendHANotification(text: string) {
+  if (!HA_TOKEN || !HA_URL) return;
+
+  fetch(HA_URL, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${HA_TOKEN}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      message: text,
+      title: "Boo display text changed",
+      data: {
+        channel: "Boo change",
+      },
+    }),
+  }).catch((err) => {
+    console.error("Failed to send Home Assistant notification:", err);
   });
 }
 
@@ -135,6 +158,7 @@ app.post("/text", async (c) => {
 
   db.run("INSERT INTO text_history (text) VALUES (?)", [text]);
   fireWebhooks({ event: "armed", text });
+  sendHANotification(text);
 
   return c.json({ ok: true, text });
 });
@@ -270,6 +294,9 @@ console.log(`Boo Display server listening on port ${PORT}`);
 console.log(`ESPHome host: ${ESPHOME_HOST}`);
 console.log(`Polling interval: ${POLL_INTERVAL}ms`);
 console.log(`Database: ${DB_PATH}`);
+if (HA_TOKEN && HA_URL) {
+  console.log(`Home Assistant notifications enabled: ${HA_URL}`);
+}
 
 export default {
   port: PORT,
