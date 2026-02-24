@@ -62,7 +62,7 @@ function fireWebhooks(payload: Record<string, unknown>) {
 // --- State ---
 
 let lastBlinking: boolean | null = null;
-let lastText: string = "";
+let lastText: string | null = null;
 let deviceOnline: boolean | null = null;
 
 // --- Polling ---
@@ -134,6 +134,9 @@ app.post("/text", async (c) => {
 });
 
 app.get("/text", (c) => {
+  if (lastText === null) {
+    return c.json({ error: "Last set text unknown" }, 400);
+  }
   return c.json({ text: lastText });
 });
 

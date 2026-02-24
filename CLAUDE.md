@@ -93,6 +93,7 @@ Set scroll text (plaintext body). Fires `armed` webhook.
 #### `GET /text`
 Returns the last text set via this server (in-memory, resets on server restart).
 - **Success** `200`: `{"text": "Hello"}`
+- **Error** `400`: `{"error": "Last set text unknown"}` (no text has been set since server start)
 
 #### `GET /alarm`
 Returns current blinking state from the device.

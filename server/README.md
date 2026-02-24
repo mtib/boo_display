@@ -38,6 +38,9 @@ curl http://localhost:3000/text
 
 Response: `{"text": "Hello World"}`
 
+Errors:
+- `400` — `{"error": "Last set text unknown"}` (no text set since server start)
+
 ### `GET /alarm`
 
 Get the current alarm (blinking) state from the device.
