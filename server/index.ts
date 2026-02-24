@@ -204,6 +204,7 @@ app.get("/health", async (c) => {
     temperature_c: temperatureResult.value,
     humidity_pct: humidityResult.value,
     rtt_ms: rtt,
+    server_git_sha: process.env.GIT_SHA ?? "unknown",
   });
 });
 

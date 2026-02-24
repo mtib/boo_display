@@ -62,7 +62,7 @@ curl http://localhost:3000/health
 
 Response:
 ```json
-{"boot_count": 42, "temperature_c": 21.0, "humidity_pct": 55.0, "rtt_ms": 38}
+{"boot_count": 42, "temperature_c": 21.0, "humidity_pct": 55.0, "rtt_ms": 38, "server_git_sha": "abc1234..."}
 ```
 
 Errors:
