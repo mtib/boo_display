@@ -101,7 +101,7 @@ Returns current blinking state from the device.
 
 #### `GET /health`
 Fetches boot count, temperature, and humidity from the device. Reports round-trip time.
-- **Success** `200`: `{"boot_count": 42, "temperature_c": 21.0, "humidity_pct": 55.0, "rtt_ms": 38, "server_git_sha": "abc1234..."}`
+- **Success** `200`: `{"boot_count": 42, "temperature_c": 21.0, "humidity_pct": 55.0, "rtt_ms": 38, "server_git_sha": "abc1234...", "server_started_at": "2026-02-24T12:00:00.000Z"}`
 - **Error** `502`:
   ```json
   {

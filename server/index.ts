@@ -10,6 +10,7 @@ const PORT = parseInt(process.env.PORT || "3000", 10);
 const DB_PATH = process.env.DB_PATH || "./data/webhooks.db";
 const POLL_INTERVAL = parseInt(process.env.POLL_INTERVAL || "10000", 10);
 const DEVICE_TIMEOUT = 2000;
+const SERVER_STARTED_AT = new Date().toISOString();
 
 // --- Database setup ---
 
@@ -205,6 +206,7 @@ app.get("/health", async (c) => {
     humidity_pct: humidityResult.value,
     rtt_ms: rtt,
     server_git_sha: process.env.GIT_SHA ?? "unknown",
+    server_started_at: SERVER_STARTED_AT,
   });
 });
 
