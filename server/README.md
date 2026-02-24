@@ -36,7 +36,7 @@ Get the last text that was set via the server, including when it was set.
 curl http://localhost:3000/text
 ```
 
-Response: `{"text": "Hello World", "set_at": "2026-02-24 12:00:00"}`
+Response: `{"text": "Hello World", "set_at": "2026-02-24T12:00:00.000Z"}`
 
 Errors:
 - `400` — `{"error": "Last set text unknown"}` (no text has been set)
@@ -90,7 +90,7 @@ List all registered webhooks.
 curl http://localhost:3000/webhooks
 ```
 
-Response: `{"webhooks": [{"id": 1, "url": "https://example.com/hook", "created_at": "2026-02-23 12:00:00"}]}`
+Response: `{"webhooks": [{"id": 1, "url": "https://example.com/hook", "created_at": "2026-02-23T12:00:00.000Z"}]}`
 
 ### `POST /webhooks`
 

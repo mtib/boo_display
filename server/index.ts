@@ -144,7 +144,8 @@ app.get("/text", (c) => {
   if (!row) {
     return c.json({ error: "Last set text unknown" }, 400);
   }
-  return c.json({ text: row.text, set_at: row.set_at });
+  const isoDate = new Date(row.set_at).toISOString();
+  return c.json({ text: row.text, set_at: isoDate });
 });
 
 app.get("/alarm", async (c) => {
@@ -223,8 +224,13 @@ app.get("/health", async (c) => {
 // --- Webhook management ---
 
 app.get("/webhooks", (c) => {
-  const webhooks = db.query("SELECT id, url, created_at FROM webhooks ORDER BY id").all();
-  return c.json({ webhooks });
+  const webhooks = db.query("SELECT id, url, created_at FROM webhooks ORDER BY id").all() as any[];
+  const formattedWebhooks = webhooks.map((w) => ({
+    id: w.id,
+    url: w.url,
+    created_at: new Date(w.created_at).toISOString(),
+  }));
+  return c.json({ webhooks: formattedWebhooks });
 });
 
 app.post("/webhooks", async (c) => {

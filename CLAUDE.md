@@ -82,6 +82,8 @@ Hono app running on Bun, proxies to the ESP32 and adds webhook support.
 
 > **Important**: Any change to server endpoints (additions, removals, changed responses or errors) must be reflected in `server/README.md`.
 
+> **Timestamps**: All timestamps in API responses and requests must be ISO 8601 format (e.g., `"2026-02-24T12:00:00.000Z"`). Convert from/to database datetime format as needed.
+
 
 
 #### `POST /text`
@@ -92,7 +94,7 @@ Set scroll text (plaintext body). Fires `armed` webhook.
 
 #### `GET /text`
 Returns the last text set via this server, stored in the database.
-- **Success** `200`: `{"text": "Hello", "set_at": "2026-02-24 12:00:00"}`
+- **Success** `200`: `{"text": "Hello", "set_at": "2026-02-24T12:00:00.000Z"}`
 - **Error** `400`: `{"error": "Last set text unknown"}` (no text has been set)
 
 #### `GET /alarm`
@@ -118,7 +120,7 @@ Fetches boot count, temperature, and humidity from the device. Reports round-tri
 
 #### `GET /webhooks`
 List all registered webhook URLs.
-- **Success** `200`: `{"webhooks": [{"id": 1, "url": "https://...", "created_at": "2026-02-24 12:00:00"}]}`
+- **Success** `200`: `{"webhooks": [{"id": 1, "url": "https://...", "created_at": "2026-02-24T12:00:00.000Z"}]}`
 
 #### `POST /webhooks`
 Register a webhook URL (`{"url": "..."}`).
