@@ -1,3 +1,6 @@
+# Claude Code
+.claude/
+
 # ESPHome build artifacts
 .esphome/
 
@@ -6,6 +9,13 @@ secrets.yaml
 
 # Python
 .venv/
+
+# Node.js
+node_modules/
+*.tsbuildinfo
+
+# Server data
+server/data/
 
 # macOS
 .DS_Store
