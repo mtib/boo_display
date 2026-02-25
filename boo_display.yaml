@@ -266,16 +266,22 @@ display:
       // separator removed
       int x1, y1, tw, th;
       it.get_text_bounds(0, 0, id(scroll_text).c_str(), id(font_big), TextAlign::TOP_LEFT, &x1, &y1, &tw, &th);
-      it.print(id(scroll_x), 16, id(font_big), id(scroll_text).c_str());
-      id(scroll_x) -= 1;
-      if (id(scroll_x) < -tw) {
-        id(scroll_x) = 128;
+      if (tw <= 128) {
+        // Text fits on screen, display at x=0 without scrolling
+        it.print(0, 16, id(font_big), id(scroll_text).c_str());
+      } else {
+        // Text doesn't fit, scroll it
+        it.print(id(scroll_x), 16, id(font_big), id(scroll_text).c_str());
+        id(scroll_x) -= 1;
+        if (id(scroll_x) < -tw) {
+          id(scroll_x) = 128;
+        }
       }
 
 font:
-  - file: "gfonts://Pixelify+Sans"
+  - file: "gfonts://Oswald@300"
     id: font_small
     size: 16
-  - file: "gfonts://Oswald"
+  - file: "gfonts://Oswald@300"
     id: font_big
     size: 32
