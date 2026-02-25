@@ -113,6 +113,7 @@ sensor:
             datapoints:
               - 6.8 -> 8
               - 24 -> 21
+        - round_to_multiple_of: 0.1
     humidity:
       name: "Humidity"
       id: humidity
