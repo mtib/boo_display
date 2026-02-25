@@ -108,6 +108,11 @@ sensor:
     temperature:
       name: "Temperature"
       id: temperature
+      filters:
+        - calibrate_linear:
+            datapoints:
+              - 6.8 -> 8
+              - 24 -> 21
     humidity:
       name: "Humidity"
       id: humidity
