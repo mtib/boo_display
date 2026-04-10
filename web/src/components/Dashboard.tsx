@@ -34,6 +34,15 @@ import {
 
 const REFRESH_INTERVAL = 30_000;
 
+function getPollingInterval(armedAt: number | null): number {
+  if (armedAt === null) return REFRESH_INTERVAL;
+  const elapsed = Date.now() - armedAt;
+  if (elapsed < 60_000) return 200;         // first minute: 200ms
+  if (elapsed < 360_000) return 3000;      // next 5 minutes: 3s
+  if (elapsed < 960_000) return 10_000;    // next 10 minutes: 10s
+  return REFRESH_INTERVAL;
+}
+
 function Stat({
   icon,
   label,
@@ -64,6 +73,7 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [newText, setNewText] = useState("");
   const [sending, setSending] = useState(false);
+  const [armedAt, setArmedAt] = useState<number | null>(null);
 
   const refresh = useCallback(async () => {
     setError(null);
@@ -103,12 +113,37 @@ export function Dashboard() {
     return () => clearInterval(id);
   }, [refresh]);
 
+  useEffect(() => {
+    if (armedAt === null) return;
+    let cancelled = false;
+    async function fastPoll() {
+      while (!cancelled) {
+        const interval = getPollingInterval(armedAt);
+        if (interval >= REFRESH_INTERVAL) break;
+        try {
+          const a = await getAlarm();
+          if (cancelled) break;
+          setAlarm(a);
+          if (!a.armed) {
+            setArmedAt(null);
+            refresh();
+            break;
+          }
+        } catch {}
+        await new Promise((r) => setTimeout(r, interval));
+      }
+    }
+    fastPoll();
+    return () => { cancelled = true; };
+  }, [armedAt, refresh]);
+
   const handleSend = async () => {
     if (!newText.trim()) return;
     setSending(true);
     try {
       await setText(newText.trim());
       setNewText("");
+      setArmedAt(Date.now());
       await refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to send text");
