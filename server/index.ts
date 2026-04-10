@@ -212,6 +212,7 @@ app.post("/text", async (c) => {
   }
 
   db.run("INSERT INTO text_history (text) VALUES (?)", [text]);
+  lastBlinking = true;
   fireWebhooks({ event: "armed", text });
   fireHAEvent("text_changed", { text });
   startFastPolling();
