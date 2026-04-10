@@ -11,12 +11,14 @@ HTTP server that proxies requests to the ESP32 ESPHome device and provides webho
 | `DB_PATH` | `./data/webhooks.db` | SQLite database path |
 | `POLL_INTERVAL` | `10000` | Blinking poll interval in ms |
 | `BEARER_TOKEN` | _(none)_ | If set, all requests require `Authorization: Bearer <token>`. CORS preflight (OPTIONS) is exempt. |
+| `HA_TOKEN` | _(none)_ | Home Assistant long-lived access token. Required (along with `HA_URL`) to fire HA events. |
+| `HA_URL` | _(none)_ | Home Assistant notify service URL (e.g. `https://ha.example.com/api/services/notify/devices`). Base URL is extracted to fire events. |
 
 ## Endpoints
 
 ### `POST /text`
 
-Set the scroll text on the display. Fires an `armed` webhook event.
+Set the scroll text on the display. Fires an `armed` webhook event and a `boo_display` Home Assistant event with `cause: "text_changed"`.
 
 ```sh
 curl -X POST http://localhost:3000/text -d "Hello World"

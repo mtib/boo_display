@@ -78,6 +78,8 @@ Hono app running on Bun, proxies to the ESP32 and adds webhook support.
 - `DB_PATH` — default `./data/webhooks.db`
 - `POLL_INTERVAL` — default `10000` (ms)
 - `BEARER_TOKEN` — if set, all non-OPTIONS requests require `Authorization: Bearer <token>` header. CORS preflight is always allowed through.
+- `HA_TOKEN` — Home Assistant long-lived access token. Required (with `HA_URL`) to fire HA events.
+- `HA_URL` — Home Assistant notify service URL (e.g. `https://ha.example.com/api/services/notify/devices`). Base URL is extracted to derive the events endpoint.
 
 ### Endpoints
 
@@ -88,7 +90,7 @@ Hono app running on Bun, proxies to the ESP32 and adds webhook support.
 
 
 #### `POST /text`
-Set scroll text (plaintext body). Fires `armed` webhook.
+Set scroll text (plaintext body). Fires `armed` webhook and `boo_display` HA event with `cause: "text_changed"`.
 - **Success** `200`: `{"ok": true, "text": "Hello"}`
 - **Error** `400`: `{"error": "Body must contain text"}`
 - **Error** `502`: `{"error": "Device unreachable"}` or `{"error": "Failed to set text", "status": 503}`
@@ -142,6 +144,13 @@ Remove a webhook URL (`{"url": "..."}`).
 - `{"event": "offline"}` — fired when device becomes unreachable after being online
 - `{"event": "server_restart"}` — fired once on server startup
 - Dispatch is fire-and-forget via `Promise.allSettled`
+
+### Home Assistant Integration
+- The server fires custom `boo_display` events to HA via `POST /api/events/boo_display` (requires `HA_TOKEN` + `HA_URL`)
+- Event data includes: `cause`, `timestamp`, `device_online`, `last_blinking`, `server_started_at`, plus cause-specific fields (e.g. `text` for `text_changed`)
+- Currently fired on `POST /text` with `cause: "text_changed"`
+- The HA automation `automation.boo_display_reaction` listens for `boo_display` events and dispatches actions based on `trigger.event.data.cause`
+- Notifications (previously sent directly by the server via `notify.markus_devices`) are now handled entirely by this HA automation
 
 ### Authentication
 - Bearer token auth is handled by the server itself (not Caddy) via `BEARER_TOKEN` env var
