@@ -10,6 +10,7 @@ HTTP server that proxies requests to the ESP32 ESPHome device and provides webho
 | `PORT` | `3000` | Server listen port |
 | `DB_PATH` | `./data/webhooks.db` | SQLite database path |
 | `POLL_INTERVAL` | `10000` | Blinking poll interval in ms |
+| `BEARER_TOKEN` | _(none)_ | If set, all requests require `Authorization: Bearer <token>`. CORS preflight (OPTIONS) is exempt. |
 
 ## Endpoints
 

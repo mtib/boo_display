@@ -17,5 +17,8 @@ node_modules/
 # Server data
 server/data/
 
+# Web build output
+web/dist/
+
 # macOS
 .DS_Store

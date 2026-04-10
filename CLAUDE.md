@@ -77,6 +77,7 @@ Hono app running on Bun, proxies to the ESP32 and adds webhook support.
 - `PORT` — default `3000`
 - `DB_PATH` — default `./data/webhooks.db`
 - `POLL_INTERVAL` — default `10000` (ms)
+- `BEARER_TOKEN` — if set, all non-OPTIONS requests require `Authorization: Bearer <token>` header. CORS preflight is always allowed through.
 
 ### Endpoints
 

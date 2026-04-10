@@ -3,7 +3,24 @@ import { cors } from "hono/cors";
 import { Database } from "bun:sqlite";
 
 const app = new Hono();
-app.use("*", cors());
+
+const BEARER_TOKEN = process.env.BEARER_TOKEN;
+
+app.use("*", cors({
+  origin: "*",
+  allowHeaders: ["Authorization", "Content-Type"],
+  allowMethods: ["GET", "POST", "DELETE", "OPTIONS"],
+}));
+
+if (BEARER_TOKEN) {
+  app.use("*", async (c, next) => {
+    const auth = c.req.header("Authorization");
+    if (auth !== `Bearer ${BEARER_TOKEN}`) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+    await next();
+  });
+}
 
 const ESPHOME_HOST = process.env.ESPHOME_HOST || "http://boo-display.local";
 const PORT = parseInt(process.env.PORT || "3000", 10);
@@ -295,6 +312,7 @@ console.log(`ESPHome host: ${ESPHOME_HOST}`);
 console.log(`Polling interval: ${POLL_INTERVAL}ms`);
 console.log(`Database: ${DB_PATH}`);
 console.log(`Git SHA: ${process.env.GIT_SHA ?? "unknown"}`);
+console.log(`Bearer auth: ${BEARER_TOKEN ? "enabled" : "disabled (no BEARER_TOKEN env)"}`);
 if (HA_TOKEN && HA_URL) {
   console.log(`Home Assistant notifications enabled: ${HA_URL}`);
 }
