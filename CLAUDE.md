@@ -1,7 +1,7 @@
 # Boo Display - Project Notes
 
 ## Overview
-ESPHome project for ESP32 WROOM with a Hono/Bun proxy server. Config file: `boo_display.yaml`, secrets in `secrets.yaml` (gitignored). Server in `server/`.
+ESPHome project for ESP32 WROOM with a Hono/Bun proxy server and a React web dashboard. Config file: `boo_display.yaml`, secrets in `secrets.yaml` (gitignored). Server in `server/`. Web app in `web/`.
 
 ## Hardware
 - **Board**: ESP32 WROOM (`esp32dev`)
@@ -143,11 +143,57 @@ Remove a webhook URL (`{"url": "..."}`).
 - `{"event": "server_restart"}` — fired once on server startup
 - Dispatch is fire-and-forget via `Promise.allSettled`
 
+### Authentication
+- Bearer token auth is handled by the server itself (not Caddy) via `BEARER_TOKEN` env var
+- CORS middleware runs before auth so OPTIONS preflight requests pass without credentials
+- This was moved from Caddy to the server to fix CORS preflight 401 errors from the web app
+
 ### Deployment
 - **Image**: `ghcr.io/mtib/boo_display/server:latest` — built by GitHub Actions on push to `server/`, also manually triggerable
-- **Public URL**: `https://api.display.boo.mtib.dev` — Caddy reverse proxy with bearer token auth
+- **Public URL**: `https://api.display.boo.mtib.dev` — Caddy reverse proxy (auth now in server, not Caddy)
 - **Container needs `ESPHOME_HOST` set to the device IP** — mDNS (`.local`) doesn't work inside Docker
 - Local: `cd server && bun install && bun run index.ts`
+
+## Web App (`web/`)
+Mobile-first React SPA for controlling the Boo Display, deployed as a PWA to GitHub Pages.
+
+### Stack
+- **Runtime**: Bun
+- **Framework**: React 19 + TypeScript
+- **UI Library**: Mantine 7 (dark mode by default)
+- **Build**: Vite with `vite-plugin-pwa`
+- **Deploy**: GitHub Actions → GitHub Pages
+
+### Features
+- **Dashboard**: health card (temperature, humidity, boot count, RTT), alarm status badge, current display text, text input to send new messages
+- **Auto-refresh**: polls all endpoints every 30 seconds
+- **PWA**: installable, service worker with `skipWaiting` + `clientsClaim` for immediate updates
+- **Ghost mascot icon**: custom SVG-based favicon and PWA icons
+
+### Authentication
+- Bearer token stored in URL hash (`#token`) and persisted to `localStorage`
+- On fresh open: reads from `localStorage`, restores hash — no dialog needed
+- First visit (no hash, no localStorage): shows undismissable modal dialog for token entry
+- Token changes happen by navigating to a URL with a different hash
+
+### API Client (`web/src/api.ts`)
+- Base URL: `https://api.display.boo.mtib.dev`
+- Methods: `getHealth()`, `getText()`, `setText(text)`, `getAlarm()`
+- Reads token from `window.location.hash` for `Authorization: Bearer` header
+
+### Deployment
+- **URL**: `https://boo-display.mtib.dev`
+- **CNAME**: `web/public/CNAME` → `boo-display.mtib.dev`
+- **CI**: `.github/workflows/web-pages.yml` — triggers on push to `web/` on main, or manual dispatch
+- **Build**: `bun install --frozen-lockfile && bun run build`
+- Local: `cd web && bun install && bun run dev`
+
+### Key Files
+- `web/src/App.tsx` — auth gate, token management, app shell
+- `web/src/components/Dashboard.tsx` — main dashboard with all cards
+- `web/src/components/TokenDialog.tsx` — token entry modal
+- `web/src/api.ts` — typed API client
+- `web/vite.config.ts` — Vite + PWA config
 
 ## Secrets (gitignored)
 - `wifi_ssid`, `wifi_password`: WiFi credentials
