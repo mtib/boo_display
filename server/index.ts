@@ -115,8 +115,20 @@ function fireHAEvent(cause: string, extra: Record<string, unknown> = {}) {
 
 let lastBlinking: boolean | null = null;
 let deviceOnline: boolean | null = null;
+let armedAt: number | null = null;
+let fastPollTimer: ReturnType<typeof setTimeout> | null = null;
 
 // --- Polling ---
+
+function getPollingInterval(): number {
+  if (armedAt === null) return POLL_INTERVAL;
+  const elapsed = Date.now() - armedAt;
+  if (elapsed < 60_000) return 100;       // first minute: 100ms
+  if (elapsed < 360_000) return 500;      // next 5 minutes: 500ms
+  if (elapsed < 960_000) return 1000;     // next 10 minutes: 1s
+  armedAt = null;                          // 16 minutes elapsed, back to normal
+  return POLL_INTERVAL;
+}
 
 async function pollBlinking() {
   try {
@@ -140,6 +152,7 @@ async function pollBlinking() {
     if (lastBlinking === true && current === false) {
       fireWebhooks({ event: "disarmed" });
       fireHAEvent("disarmed");
+      armedAt = null;
     }
     lastBlinking = current;
   } catch (e) {
@@ -149,6 +162,25 @@ async function pollBlinking() {
       fireWebhooks({ event: "offline" });
     }
   }
+}
+
+function scheduleFastPoll() {
+  if (fastPollTimer !== null) return;
+  async function loop() {
+    while (armedAt !== null) {
+      await pollBlinking();
+      const interval = getPollingInterval();
+      if (interval >= POLL_INTERVAL) break;
+      await new Promise((r) => setTimeout(r, interval));
+    }
+    fastPollTimer = null;
+  }
+  fastPollTimer = setTimeout(loop, 0);
+}
+
+function startFastPolling() {
+  armedAt = Date.now();
+  scheduleFastPoll();
 }
 
 fireWebhooks({ event: "server_restart" });
@@ -182,6 +214,7 @@ app.post("/text", async (c) => {
   db.run("INSERT INTO text_history (text) VALUES (?)", [text]);
   fireWebhooks({ event: "armed", text });
   fireHAEvent("text_changed", { text });
+  startFastPolling();
 
   return c.json({ ok: true, text });
 });
