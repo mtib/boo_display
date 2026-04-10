@@ -1,20 +1,37 @@
 import { useState, useEffect, useCallback } from "react";
-import { AppShell, Group, Title, ActionIcon, Text } from "@mantine/core";
-import { IconLock, IconLockOpen } from "@tabler/icons-react";
+import { AppShell, Group, Title } from "@mantine/core";
 import { Dashboard } from "./components/Dashboard";
 import { TokenDialog } from "./components/TokenDialog";
 
-function getTokenFromHash(): string {
-  return decodeURIComponent(window.location.hash.slice(1));
+const STORAGE_KEY = "boo-display-token";
+
+function getInitialToken(): string {
+  // Hash takes priority (e.g. shared link)
+  const hashToken = decodeURIComponent(window.location.hash.slice(1));
+  if (hashToken) {
+    localStorage.setItem(STORAGE_KEY, hashToken);
+    return hashToken;
+  }
+  // Fall back to localStorage
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (stored) {
+    // Restore hash so the app stays consistent
+    window.location.hash = encodeURIComponent(stored);
+    return stored;
+  }
+  return "";
 }
 
 export function App() {
-  const [token, setToken] = useState(getTokenFromHash);
+  const [token, setToken] = useState(getInitialToken);
   const [dialogOpen, setDialogOpen] = useState(!token);
 
   useEffect(() => {
     const onHashChange = () => {
-      const t = getTokenFromHash();
+      const t = decodeURIComponent(window.location.hash.slice(1));
+      if (t) {
+        localStorage.setItem(STORAGE_KEY, t);
+      }
       setToken(t);
       if (!t) setDialogOpen(true);
     };
@@ -23,6 +40,7 @@ export function App() {
   }, []);
 
   const handleTokenSubmit = useCallback((newToken: string) => {
+    localStorage.setItem(STORAGE_KEY, newToken);
     window.location.hash = encodeURIComponent(newToken);
     setToken(newToken);
     setDialogOpen(false);
@@ -31,41 +49,13 @@ export function App() {
   return (
     <AppShell header={{ height: 56 }} padding="md">
       <AppShell.Header>
-        <Group h="100%" px="md" justify="space-between">
+        <Group h="100%" px="md">
           <Title order={3}>Boo Display</Title>
-          <Group gap="xs">
-            {token && (
-              <Text size="xs" c="dimmed">
-                authenticated
-              </Text>
-            )}
-            <ActionIcon
-              variant="subtle"
-              onClick={() => {
-                if (token) {
-                  window.location.hash = "";
-                  setToken("");
-                  setDialogOpen(true);
-                } else {
-                  setDialogOpen(true);
-                }
-              }}
-              title={token ? "Change token" : "Set token"}
-            >
-              {token ? <IconLock size={20} /> : <IconLockOpen size={20} />}
-            </ActionIcon>
-          </Group>
         </Group>
       </AppShell.Header>
 
       <AppShell.Main>
-        {token ? (
-          <Dashboard />
-        ) : (
-          <Text c="dimmed" ta="center" mt="xl">
-            Please enter your API token to continue.
-          </Text>
-        )}
+        {token && <Dashboard />}
       </AppShell.Main>
 
       <TokenDialog
