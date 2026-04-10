@@ -183,6 +183,7 @@ binary_sensor:
         - lambda: |-
             id(blinking) = false;
             id(blink_state) = false;
+            id(blinking_sensor).publish_state(false);
             nvs_handle_t nvs;
             if (nvs_open("boo", NVS_READWRITE, &nvs) == ESP_OK) {
               nvs_set_u8(nvs, "blinking", 0);
@@ -251,6 +252,7 @@ text:
             }
             if (!id(boot_init) && text_changed) {
               id(blinking) = true;
+              id(blinking_sensor).publish_state(true);
               // Persist to NVS
               nvs_handle_t nvs;
               if (nvs_open("boo", NVS_READWRITE, &nvs) == ESP_OK) {
