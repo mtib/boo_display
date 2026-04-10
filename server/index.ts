@@ -106,31 +106,28 @@ function sendHANotification(text: string) {
   });
 }
 
-function triggerHAAutomation(cause: string, extra: Record<string, unknown> = {}) {
+function fireHAEvent(cause: string, extra: Record<string, unknown> = {}) {
   if (!HA_TOKEN || !HA_URL) return;
 
   const baseUrl = new URL(HA_URL).origin;
-  const payload = {
-    entity_id: "automation.boo_display_reaction",
-    variables: {
-      cause,
-      timestamp: new Date().toISOString(),
-      device_online: deviceOnline,
-      last_blinking: lastBlinking,
-      server_started_at: SERVER_STARTED_AT,
-      ...extra,
-    },
+  const eventData = {
+    cause,
+    timestamp: new Date().toISOString(),
+    device_online: deviceOnline,
+    last_blinking: lastBlinking,
+    server_started_at: SERVER_STARTED_AT,
+    ...extra,
   };
 
-  fetch(`${baseUrl}/api/services/automation/trigger`, {
+  fetch(`${baseUrl}/api/events/boo_display`, {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${HA_TOKEN}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(eventData),
   }).catch((err) => {
-    console.error("Failed to trigger Home Assistant automation:", err);
+    console.error("Failed to fire Home Assistant event:", err);
   });
 }
 
@@ -204,7 +201,7 @@ app.post("/text", async (c) => {
   db.run("INSERT INTO text_history (text) VALUES (?)", [text]);
   fireWebhooks({ event: "armed", text });
   sendHANotification(text);
-  triggerHAAutomation("text_changed", { text });
+  fireHAEvent("text_changed", { text });
 
   return c.json({ ok: true, text });
 });
