@@ -139,6 +139,7 @@ async function pollBlinking() {
 
     if (lastBlinking === true && current === false) {
       fireWebhooks({ event: "disarmed" });
+      fireHAEvent("disarmed");
     }
     lastBlinking = current;
   } catch (e) {
