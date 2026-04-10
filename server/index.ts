@@ -85,26 +85,6 @@ function fireWebhooks(payload: Record<string, unknown>) {
   });
 }
 
-function sendHANotification(text: string) {
-  if (!HA_TOKEN || !HA_URL) return;
-
-  fetch(HA_URL, {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${HA_TOKEN}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      message: text,
-      title: "Boo display text changed",
-      data: {
-        channel: "Boo change",
-      },
-    }),
-  }).catch((err) => {
-    console.error("Failed to send Home Assistant notification:", err);
-  });
-}
 
 function fireHAEvent(cause: string, extra: Record<string, unknown> = {}) {
   if (!HA_TOKEN || !HA_URL) return;
@@ -200,7 +180,6 @@ app.post("/text", async (c) => {
 
   db.run("INSERT INTO text_history (text) VALUES (?)", [text]);
   fireWebhooks({ event: "armed", text });
-  sendHANotification(text);
   fireHAEvent("text_changed", { text });
 
   return c.json({ ok: true, text });
