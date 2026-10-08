@@ -45,6 +45,11 @@ esphome:
                 id(blinking) = blink_val != 0;
                 ESP_LOGI("boot", "Restored blinking: %s", id(blinking) ? "true" : "false");
               }
+              uint8_t clear_val = 0;
+              if (nvs_get_u8(nvs, "cleared", &clear_val) == ESP_OK) {
+                id(cleared) = clear_val != 0;
+                ESP_LOGI("boot", "Restored cleared: %s", id(cleared) ? "true" : "false");
+              }
               nvs_close(nvs);
             }
             id(scroll_text_input).publish_state(id(scroll_text));
@@ -55,14 +60,13 @@ esphome:
             condition:
               lambda: "return !id(blinking);"
             then:
-              - light.control:
-                  id: rgb_led
-                  state: on
-                  brightness: 20%
-                  red: 0%
-                  green: 0%
-                  blue: 100%
-                  transition_length: 0s
+              - lambda: |-
+                  // Standby blue; half brightness when in cleared "sleep" mode
+                  auto call = id(rgb_led).turn_on();
+                  call.set_brightness(id(cleared) ? 0.10f : 0.20f);
+                  call.set_rgb(0.0f, 0.0f, 1.0f);
+                  call.set_transition_length(0);
+                  call.perform();
 
 esp32:
   board: esp32dev
@@ -128,6 +132,10 @@ globals:
     type: bool
     restore_value: false
     initial_value: "false"
+  - id: cleared
+    type: bool
+    restore_value: false
+    initial_value: "false"
   - id: scroll_text
     type: std::string
     restore_value: false
@@ -181,23 +189,29 @@ binary_sensor:
     on_press:
       then:
         - lambda: |-
-            id(blinking) = false;
-            id(blink_state) = false;
-            id(blinking_sensor).publish_state(false);
+            if (id(blinking)) {
+              // Armed -> disarm to normal (bright) standby, showing the message
+              id(blinking) = false;
+              id(blink_state) = false;
+              id(cleared) = false;
+            } else {
+              // Already disarmed -> toggle cleared "sleep" mode (dim LED, temp/humidity only)
+              id(cleared) = !id(cleared);
+            }
+            id(blinking_sensor).publish_state(id(blinking));
             nvs_handle_t nvs;
             if (nvs_open("boo", NVS_READWRITE, &nvs) == ESP_OK) {
-              nvs_set_u8(nvs, "blinking", 0);
+              nvs_set_u8(nvs, "blinking", id(blinking) ? 1 : 0);
+              nvs_set_u8(nvs, "cleared", id(cleared) ? 1 : 0);
               nvs_commit(nvs);
               nvs_close(nvs);
             }
-        - light.control:
-                  id: rgb_led
-                  state: on
-                  brightness: 20%
-                  red: 0%
-                  green: 0%
-                  blue: 100%
-                  transition_length: 0s
+            // Standby blue; half brightness when cleared
+            auto call = id(rgb_led).turn_on();
+            call.set_brightness(id(cleared) ? 0.10f : 0.20f);
+            call.set_rgb(0.0f, 0.0f, 1.0f);
+            call.set_transition_length(0);
+            call.perform();
 
 output:
   - platform: ledc
@@ -252,12 +266,14 @@ text:
             }
             if (!id(boot_init) && text_changed) {
               id(blinking) = true;
+              id(cleared) = false;
               id(blinking_sensor).publish_state(true);
               // Persist to NVS
               nvs_handle_t nvs;
               if (nvs_open("boo", NVS_READWRITE, &nvs) == ESP_OK) {
                 nvs_set_str(nvs, "text", x.c_str());
                 nvs_set_u8(nvs, "blinking", 1);
+                nvs_set_u8(nvs, "cleared", 0);
                 nvs_commit(nvs);
                 nvs_close(nvs);
               }
@@ -269,20 +285,28 @@ display:
     address: 0x3C
     update_interval: 50ms
     lambda: |-
-      it.printf(0, 0, id(font_small), "%.1f°C", id(temperature).state);
-      it.printf(128, 0, id(font_small), TextAlign::TOP_RIGHT, "%.0f%%", id(humidity).state);
-      // separator removed
-      int x1, y1, tw, th;
-      it.get_text_bounds(0, 0, id(scroll_text).c_str(), id(font_big), TextAlign::TOP_LEFT, &x1, &y1, &tw, &th);
-      if (tw <= 128) {
-        // Text fits on screen, display at x=0 without scrolling
-        it.print(0, 16, id(font_big), id(scroll_text).c_str());
+      if (id(cleared)) {
+        // Cleared "sleep" mode: no message, just large centered temp + humidity.
+        // Anchor on the baseline (not the em-box top) so the tall font padding
+        // doesn't leave a gap above and push the bottom line off-screen.
+        it.printf(64, 26, id(font_big), TextAlign::BASELINE_CENTER, "%.1f°C", id(temperature).state);
+        it.printf(64, 58, id(font_big), TextAlign::BASELINE_CENTER, "%.0f%%", id(humidity).state);
       } else {
-        // Text doesn't fit, scroll it
-        it.print(id(scroll_x), 16, id(font_big), id(scroll_text).c_str());
-        id(scroll_x) -= 1;
-        if (id(scroll_x) < -tw) {
-          id(scroll_x) = 128;
+        it.printf(0, 0, id(font_small), "%.1f°C", id(temperature).state);
+        it.printf(128, 0, id(font_small), TextAlign::TOP_RIGHT, "%.0f%%", id(humidity).state);
+        // separator removed
+        int x1, y1, tw, th;
+        it.get_text_bounds(0, 0, id(scroll_text).c_str(), id(font_big), TextAlign::TOP_LEFT, &x1, &y1, &tw, &th);
+        if (tw <= 128) {
+          // Text fits on screen, display at x=0 without scrolling
+          it.print(0, 16, id(font_big), id(scroll_text).c_str());
+        } else {
+          // Text doesn't fit, scroll it
+          it.print(id(scroll_x), 16, id(font_big), id(scroll_text).c_str());
+          id(scroll_x) -= 1;
+          if (id(scroll_x) < -tw) {
+            id(scroll_x) = 128;
+          }
         }
       }
 
