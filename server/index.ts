@@ -146,7 +146,7 @@ async function pollBlinking() {
       fireWebhooks({ event: "online" });
     }
 
-    const data = await res.json();
+    const data = (await res.json()) as { value: unknown };
     const current = data.value as boolean;
 
     if (lastBlinking === true && current === false) {
@@ -242,7 +242,7 @@ app.get("/alarm", async (c) => {
     return c.json({ error: "Failed to read alarm state", status: res.status }, 502);
   }
 
-  const data = await res.json();
+  const data = (await res.json()) as { value: unknown };
   return c.json({ armed: data.value });
 });
 
@@ -264,7 +264,7 @@ app.get("/health", async (c) => {
     if (!res.ok) {
       return { ok: false, error: "Device error", status: res.status, rtt: Date.now() - start };
     }
-    const data = await res.json();
+    const data = (await res.json()) as { value: unknown };
     return { ok: true, value: data.value as number, rtt: Date.now() - start };
   }
 
