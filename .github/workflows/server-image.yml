@@ -52,6 +52,10 @@ jobs:
           cd containers/
           docker compose pull boo-display
           docker compose up -d boo-display
+          # the replaced image is dangling now: drop it once the new container has stayed up for a few seconds (plain prune,
+          # an image something still uses stays); a failed cleanup never fails the deploy
+          sleep 8
+          [ "$(docker inspect -f '{{.State.Status}}' containers-boo-display-1)" = running ] && docker image prune -f | tail -1 || true
           ENDINNER
           ENDSSH
 
